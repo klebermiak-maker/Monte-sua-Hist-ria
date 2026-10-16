@@ -16,14 +16,19 @@ import {
 import { useGame } from '../context/GameContext';
 import { getLevelInfo, AVATARS } from '../data/rewards';
 import { sound } from '../utils/audio';
+import { StudentProfileModal } from './StudentProfileModal';
+import { formatTurmaLabel, getTurmaColor } from '../data/studentProfile';
 
 export const Header: React.FC = () => {
-  const { progress, activeTab, setActiveTab, toggleSound, updateStudentName } = useGame();
+  const { progress, activeTab, setActiveTab, toggleSound, updateStudentName, studentTurmaLabel } = useGame();
   const levelData = getLevelInfo(progress.xp);
   const currentAvatarObj = AVATARS.find((a) => a.id === progress.currentAvatar) || AVATARS[0];
 
   const [isEditingName, setIsEditingName] = useState(false);
   const [tempName, setTempName] = useState(progress.studentName);
+  const [showProfileModal, setShowProfileModal] = useState(false);
+
+  const turmaStyle = getTurmaColor(progress.studentGrade);
 
   const handleSaveName = (e: React.FormEvent) => {
     e.preventDefault();
@@ -70,48 +75,40 @@ export const Header: React.FC = () => {
 
           {/* Player stats: Avatar, Level, XP bar, Coins, Sound */}
           <div className="flex items-center flex-wrap justify-center gap-2 sm:gap-3">
-            {/* Student Name & Avatar */}
-            <div className="flex items-center gap-2 bg-slate-100/80 hover:bg-slate-100 px-3 py-1.5 rounded-2xl border border-slate-200 transition-colors">
+            {/* Student Name & Turma Badge */}
+            <div className="flex items-center gap-1.5 sm:gap-2 bg-slate-100/90 hover:bg-slate-100 px-3 py-1.5 rounded-2xl border border-slate-200 transition-all shadow-2xs">
               <button
                 onClick={() => {
                   setActiveTab('rewards');
                   sound.playPop();
                 }}
                 title="Trocar avatar no Baú de Recompensas"
-                className="w-8 h-8 rounded-full bg-white shadow-xs border border-slate-200 flex items-center justify-center text-lg hover:scale-110 transition-transform cursor-pointer"
+                className="w-8 h-8 rounded-full bg-white shadow-xs border border-slate-200 flex items-center justify-center text-lg hover:scale-110 transition-transform cursor-pointer shrink-0"
               >
                 {currentAvatarObj.emoji}
               </button>
 
-              {isEditingName ? (
-                <form onSubmit={handleSaveName} className="flex items-center gap-1">
-                  <input
-                    type="text"
-                    value={tempName}
-                    onChange={(e) => setTempName(e.target.value)}
-                    maxLength={20}
-                    autoFocus
-                    className="text-xs font-bold bg-white border border-amber-400 rounded-lg px-2 py-0.5 outline-hidden w-28 text-slate-800"
-                  />
-                  <button
-                    type="submit"
-                    className="p-1 rounded-md bg-emerald-500 text-white hover:bg-emerald-600 transition-colors cursor-pointer"
-                  >
-                    <Check className="w-3.5 h-3.5" />
-                  </button>
-                </form>
-              ) : (
-                <div
-                  onClick={() => setIsEditingName(true)}
-                  className="cursor-pointer group flex items-center gap-1"
-                  title="Clique para editar seu nome de escritor(a)"
+              <div
+                onClick={() => {
+                  sound.playPop();
+                  setShowProfileModal(true);
+                }}
+                className="cursor-pointer group flex items-center gap-1.5"
+                title="Clique para editar crachá do aluno e trocar de turma (3º, 4º ou 5º ano do A ao E)"
+              >
+                <span className="text-xs font-black text-slate-800 max-w-[100px] sm:max-w-[130px] truncate group-hover:text-amber-600 transition-colors">
+                  {progress.studentName}
+                </span>
+
+                {/* Turma Badge */}
+                <span
+                  className={`text-[11px] font-black px-2 py-0.5 rounded-lg border ${turmaStyle.badgeBg} ${turmaStyle.badgeText} ${turmaStyle.badgeBorder} flex items-center gap-0.5 shadow-2xs group-hover:scale-105 transition-transform`}
                 >
-                  <span className="text-xs font-bold text-slate-800 max-w-[110px] truncate">
-                    {progress.studentName}
-                  </span>
-                  <Edit3 className="w-3 h-3 text-slate-400 group-hover:text-amber-600 transition-colors" />
-                </div>
-              )}
+                  🎒 {studentTurmaLabel}
+                </span>
+
+                <Edit3 className="w-3.5 h-3.5 text-slate-400 group-hover:text-amber-600 transition-colors shrink-0" />
+              </div>
             </div>
 
             {/* Level & XP Gauge */}
@@ -200,6 +197,12 @@ export const Header: React.FC = () => {
           })}
         </nav>
       </div>
+
+      {/* Student Profile & Class Selector Modal */}
+      <StudentProfileModal
+        isOpen={showProfileModal}
+        onClose={() => setShowProfileModal(false)}
+      />
     </header>
   );
 };

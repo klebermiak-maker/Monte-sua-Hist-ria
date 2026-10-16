@@ -16,14 +16,24 @@ import {
   X,
   Flame,
   Check,
+  GraduationCap,
+  School,
 } from 'lucide-react';
 import { useGame, SavedStory } from '../context/GameContext';
 import { MuralStory, subscribeToMuralStories, publishStoryToMural, likeStoryOnMural } from '../services/muralService';
 import { generateStoryPdf } from '../utils/pdfExport';
 import { sound } from '../utils/audio';
+import {
+  SchoolGrade,
+  SchoolClassLetter,
+  GRADE_OPTIONS,
+  CLASS_LETTERS,
+  formatTurmaLabel,
+  getTurmaColor,
+} from '../data/studentProfile';
 
 export const CommunityMural: React.FC = () => {
-  const { savedStories, progress, addXpAndCoins, setActiveTab, triggerConfetti } = useGame();
+  const { savedStories, progress, addXpAndCoins, setActiveTab, triggerConfetti, studentTurmaLabel } = useGame();
 
   const [muralStories, setMuralStories] = useState<MuralStory[]>([]);
   const [loading, setLoading] = useState(true);
@@ -31,6 +41,8 @@ export const CommunityMural: React.FC = () => {
 
   const [searchFilter, setSearchFilter] = useState('');
   const [selectedGenreFilter, setSelectedGenreFilter] = useState('all');
+  const [selectedGradeFilter, setSelectedGradeFilter] = useState<string>('all');
+  const [selectedClassFilter, setSelectedClassFilter] = useState<string>('all');
 
   const [readingStory, setReadingStory] = useState<MuralStory | null>(null);
   const [showPublishModal, setShowPublishModal] = useState(false);
@@ -81,10 +93,18 @@ export const CommunityMural: React.FC = () => {
     setPublishingId(story.id);
     sound.playMagic();
 
+    const grade = story.studentGrade || progress.studentGrade || '4';
+    const classLetter = story.studentClass || progress.studentClass || 'B';
+    const turmaStr = story.studentTurma || formatTurmaLabel(grade, classLetter);
+
     try {
       await publishStoryToMural({
         title: story.title,
         author: story.author || progress.studentName,
+        studentGrade: String(grade),
+        studentClass: String(classLetter),
+        studentTurma: turmaStr,
+        schoolName: story.schoolName || progress.schoolName,
         authorUid: progress.studentName || 'aluno',
         genreId: story.genreId,
         genreName: story.genreName,
@@ -115,6 +135,10 @@ export const CommunityMural: React.FC = () => {
     const doc = generateStoryPdf({
       title: story.title,
       author: story.author,
+      studentGrade: story.studentGrade,
+      studentClass: story.studentClass,
+      studentTurma: story.studentTurma,
+      schoolName: story.schoolName,
       genreName: story.genreName,
       createdAt: story.createdAt,
       cards: story.cards,
@@ -128,15 +152,29 @@ export const CommunityMural: React.FC = () => {
     doc.save(`${sanitizedFileName}.pdf`);
   };
 
-  // Filtered stories
+  // Filtered stories with Grade, Class, Genre, and Search
   const filteredStories = muralStories.filter((s) => {
+    const term = searchFilter.toLowerCase().trim();
     const matchesSearch =
-      s.title.toLowerCase().includes(searchFilter.toLowerCase()) ||
-      s.author.toLowerCase().includes(searchFilter.toLowerCase());
+      !term ||
+      s.title.toLowerCase().includes(term) ||
+      s.author.toLowerCase().includes(term) ||
+      (s.studentTurma && s.studentTurma.toLowerCase().includes(term)) ||
+      (s.schoolName && s.schoolName.toLowerCase().includes(term));
 
     const matchesGenre = selectedGenreFilter === 'all' || s.genreId === selectedGenreFilter;
 
-    return matchesSearch && matchesGenre;
+    const matchesGrade =
+      selectedGradeFilter === 'all' ||
+      s.studentGrade === selectedGradeFilter ||
+      (s.studentTurma && s.studentTurma.startsWith(`${selectedGradeFilter}º`));
+
+    const matchesClass =
+      selectedClassFilter === 'all' ||
+      s.studentClass === selectedClassFilter ||
+      (s.studentTurma && s.studentTurma.endsWith(` ${selectedClassFilter}`));
+
+    return matchesSearch && matchesGenre && matchesGrade && matchesClass;
   });
 
   const totalLikes = muralStories.reduce((acc, s) => acc + (s.likesCount || 0), 0);
@@ -189,43 +227,135 @@ export const CommunityMural: React.FC = () => {
         </div>
       </div>
 
-      {/* Search & Filter Toolbar */}
-      <div className="bg-white p-4 rounded-3xl border border-slate-200 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-3">
-        <div className="relative w-full sm:w-80">
-          <input
-            type="text"
-            value={searchFilter}
-            onChange={(e) => setSearchFilter(e.target.value)}
-            placeholder="Buscar por título ou autor..."
-            className="w-full text-xs font-bold pl-9 pr-4 py-2.5 rounded-2xl border border-slate-200 bg-slate-50 focus:bg-white text-slate-800 outline-none focus:border-amber-500 transition-colors"
-          />
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+      {/* Search & Comprehensive Filters Toolbar */}
+      <div className="bg-white p-4 sm:p-5 rounded-3xl border border-slate-200 shadow-xs space-y-3.5">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+          {/* Search Input */}
+          <div className="relative w-full sm:w-80">
+            <input
+              type="text"
+              value={searchFilter}
+              onChange={(e) => setSearchFilter(e.target.value)}
+              placeholder="Buscar por título, aluno ou turma (ex: 4º B)..."
+              className="w-full text-xs font-bold pl-9 pr-4 py-2.5 rounded-2xl border border-slate-200 bg-slate-50 focus:bg-white text-slate-800 outline-none focus:border-amber-500 transition-colors shadow-inner"
+            />
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+          </div>
+
+          {/* Genre Filter Pills */}
+          <div className="flex flex-wrap items-center gap-1.5 w-full sm:w-auto">
+            <span className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider mr-1">
+              Gênero:
+            </span>
+            {[
+              { id: 'all', label: 'Todos' },
+              { id: 'narrativa', label: 'Aventura' },
+              { id: 'fabula', label: 'Fábula' },
+              { id: 'noticia', label: 'Notícia' },
+              { id: 'carta_diario', label: 'Carta' },
+              { id: 'tirinha', label: 'Tirinha' },
+            ].map((item) => (
+              <button
+                key={item.id}
+                onClick={() => {
+                  sound.playPop();
+                  setSelectedGenreFilter(item.id);
+                }}
+                className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  selectedGenreFilter === item.id
+                    ? 'bg-amber-500 text-white shadow-2xs scale-102'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-1.5 w-full sm:w-auto">
-          {[
-            { id: 'all', label: 'Todos os Gêneros' },
-            { id: 'narrativa', label: 'Aventura' },
-            { id: 'fabula', label: 'Fábula' },
-            { id: 'noticia', label: 'Notícia' },
-            { id: 'carta_diario', label: 'Carta/Diário' },
-            { id: 'tirinha', label: 'Tirinha' },
-          ].map((item) => (
+        {/* Grade & Turma Selector Bar (3º, 4º e 5º Ano do A ao E) */}
+        <div className="pt-3 border-t border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-3">
+          {/* Grade Filters (3º, 4º, 5º Ano) */}
+          <div className="flex items-center flex-wrap gap-1.5">
+            <span className="text-[11px] font-extrabold text-slate-500 flex items-center gap-1 mr-1">
+              <GraduationCap className="w-3.5 h-3.5 text-amber-600" />
+              Ano Escolar:
+            </span>
             <button
-              key={item.id}
               onClick={() => {
                 sound.playPop();
-                setSelectedGenreFilter(item.id);
+                setSelectedGradeFilter('all');
               }}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                selectedGenreFilter === item.id
-                  ? 'bg-amber-500 text-white shadow-xs scale-102'
+              className={`px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                selectedGradeFilter === 'all'
+                  ? 'bg-slate-900 text-white shadow-2xs'
                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
               }`}
             >
-              {item.label}
+              Todos os Anos
             </button>
-          ))}
+            {GRADE_OPTIONS.map((g) => {
+              const isSelected = selectedGradeFilter === g.grade;
+              return (
+                <button
+                  key={g.grade}
+                  onClick={() => {
+                    sound.playPop();
+                    setSelectedGradeFilter(g.grade);
+                  }}
+                  className={`px-3 py-1 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1 ${
+                    isSelected
+                      ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-2xs scale-102'
+                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                  }`}
+                >
+                  <span>{g.emoji}</span>
+                  <span>{g.shortLabel}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Turmas do A ao E */}
+          <div className="flex items-center flex-wrap gap-1">
+            <span className="text-[11px] font-extrabold text-slate-500 mr-1 flex items-center gap-1">
+              <School className="w-3.5 h-3.5 text-emerald-600" />
+              Turma:
+            </span>
+            <button
+              onClick={() => {
+                sound.playPop();
+                setSelectedClassFilter('all');
+              }}
+              className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                selectedClassFilter === 'all'
+                  ? 'bg-orange-500 text-white shadow-2xs'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
+            >
+              Todas (A-E)
+            </button>
+            {CLASS_LETTERS.map((letter) => {
+              const isSelected = selectedClassFilter === letter;
+              return (
+                <button
+                  key={letter}
+                  onClick={() => {
+                    sound.playPop();
+                    setSelectedClassFilter(letter);
+                  }}
+                  className={`w-7 h-7 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center justify-center ${
+                    isSelected
+                      ? 'bg-gradient-to-br from-orange-500 to-amber-500 text-white shadow-2xs scale-105'
+                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200'
+                  }`}
+                  title={`Filtrar apenas Turma ${letter}`}
+                >
+                  {letter}
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
 
@@ -241,25 +371,45 @@ export const CommunityMural: React.FC = () => {
         <div className="bg-white rounded-3xl p-12 text-center border-2 border-dashed border-slate-300 space-y-4">
           <div className="text-5xl">📌</div>
           <h3 className="font-extrabold text-lg text-slate-800 font-display">
-            Nenhuma história encontrada no Mural
+            Nenhuma história encontrada para os filtros selecionados
           </h3>
           <p className="text-xs text-slate-500 max-w-md mx-auto">
-            Seja o primeiro a publicar sua história para a turma toda ler e dar estrelas!
+            {selectedGradeFilter !== 'all' || selectedClassFilter !== 'all'
+              ? `Ainda não há histórias publicadas para a turma selecionada. Publique a primeira produção da sua classe!`
+              : 'Seja o primeiro a publicar sua história para a turma toda ler e dar estrelas!'}
           </p>
-          <button
-            onClick={() => {
-              sound.playPop();
-              setShowPublishModal(true);
-            }}
-            className="px-5 py-2.5 rounded-2xl bg-amber-500 hover:bg-amber-600 text-white font-extrabold text-xs shadow-md cursor-pointer transition-transform hover:scale-105"
-          >
-            Publicar Primeira História 🚀
-          </button>
+          <div className="flex items-center justify-center gap-2">
+            {(selectedGradeFilter !== 'all' || selectedClassFilter !== 'all') && (
+              <button
+                onClick={() => {
+                  setSelectedGradeFilter('all');
+                  setSelectedClassFilter('all');
+                  setSearchFilter('');
+                }}
+                className="px-4 py-2 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs cursor-pointer transition-colors"
+              >
+                Limpar Filtros 🔄
+              </button>
+            )}
+            <button
+              onClick={() => {
+                sound.playPop();
+                setShowPublishModal(true);
+              }}
+              className="px-5 py-2.5 rounded-2xl bg-amber-500 hover:bg-amber-600 text-white font-extrabold text-xs shadow-md cursor-pointer transition-transform hover:scale-105"
+            >
+              Publicar Minha História 🚀
+            </button>
+          </div>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {filteredStories.map((story) => {
             const isLiked = likedMap[story.id];
+            const storyGrade = story.studentGrade || '4';
+            const storyClass = story.studentClass || 'B';
+            const storyTurma = story.studentTurma || `${storyGrade}º Ano ${storyClass}`;
+            const turmaColor = getTurmaColor(storyGrade);
 
             return (
               <div
@@ -285,13 +435,22 @@ export const CommunityMural: React.FC = () => {
                     </div>
 
                     <div className="min-w-0 pr-6">
-                      <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-200">
-                        {story.genreName.split(' ')[0]}
-                      </span>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-200">
+                          {story.genreName.split(' ')[0]}
+                        </span>
+                        {/* Student Turma Badge */}
+                        <span
+                          className={`text-[10px] font-black px-2 py-0.5 rounded-md border ${turmaColor.badgeBg} ${turmaColor.badgeText} ${turmaColor.badgeBorder} flex items-center gap-0.5`}
+                        >
+                          🎒 {storyTurma}
+                        </span>
+                      </div>
+
                       <h3 className="font-extrabold text-base text-slate-900 font-display truncate mt-1 group-hover:text-amber-700 transition-colors">
                         {story.title}
                       </h3>
-                      <p className="text-xs text-slate-500 font-medium truncate">
+                      <p className="text-xs text-slate-600 font-bold truncate">
                         Por: {story.author}
                       </p>
                     </div>
@@ -373,14 +532,21 @@ export const CommunityMural: React.FC = () => {
                   {readingStory.coverEmoji}
                 </div>
                 <div>
-                  <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-200">
-                    {readingStory.genreName}
-                  </span>
-                  <h3 className="font-extrabold text-base sm:text-lg text-slate-900 font-display">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-200">
+                      {readingStory.genreName}
+                    </span>
+                    <span
+                      className={`text-[10px] font-black px-2 py-0.5 rounded-md border ${getTurmaColor(readingStory.studentGrade).badgeBg} ${getTurmaColor(readingStory.studentGrade).badgeText} ${getTurmaColor(readingStory.studentGrade).badgeBorder} flex items-center gap-0.5`}
+                    >
+                      🎒 {readingStory.studentTurma || (readingStory.studentGrade ? `${readingStory.studentGrade}º Ano ${readingStory.studentClass || ''}` : '4º Ano B')}
+                    </span>
+                  </div>
+                  <h3 className="font-extrabold text-base sm:text-lg text-slate-900 font-display mt-0.5">
                     {readingStory.title}
                   </h3>
                   <p className="text-xs text-slate-500 font-medium">
-                    Autor(a): {readingStory.author} • Publicado em {readingStory.createdAt}
+                    Autor(a): <span className="font-bold text-slate-700">{readingStory.author}</span> • {readingStory.schoolName || 'Alfabetiza MT'} • {readingStory.createdAt}
                   </p>
                 </div>
               </div>

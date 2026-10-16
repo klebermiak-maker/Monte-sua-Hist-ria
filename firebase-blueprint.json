@@ -59,6 +59,26 @@
         "createdAt": {
           "type": "string",
           "description": "Data de publicação formatada ou timestamp"
+        },
+        "studentGrade": {
+          "type": "string",
+          "maxLength": 10,
+          "description": "Ano escolar do aluno (3º, 4º ou 5º ano)"
+        },
+        "studentClass": {
+          "type": "string",
+          "maxLength": 10,
+          "description": "Letra da turma (A ao E)"
+        },
+        "studentTurma": {
+          "type": "string",
+          "maxLength": 40,
+          "description": "Identificação completa da turma (ex: 4º Ano B)"
+        },
+        "schoolName": {
+          "type": "string",
+          "maxLength": 120,
+          "description": "Nome da escola"
         }
       },
       "required": ["title", "author", "authorUid", "genreName", "sections"]

@@ -17,6 +17,7 @@ import { useGame, SavedStory } from '../context/GameContext';
 import { sound } from '../utils/audio';
 import { generateStoryPdf } from '../utils/pdfExport';
 import { publishStoryToMural } from '../services/muralService';
+import { getTurmaColor, formatTurmaLabel } from '../data/studentProfile';
 
 export const LibraryView: React.FC = () => {
   const { savedStories, deleteStory, progress, setActiveTab, addXpAndCoins, triggerConfetti } = useGame();
@@ -32,6 +33,10 @@ export const LibraryView: React.FC = () => {
     const doc = generateStoryPdf({
       title: selectedStory.title,
       author: selectedStory.author,
+      studentGrade: selectedStory.studentGrade,
+      studentClass: selectedStory.studentClass,
+      studentTurma: selectedStory.studentTurma,
+      schoolName: selectedStory.schoolName,
       genreName: selectedStory.genreName,
       createdAt: selectedStory.createdAt,
       cards: selectedStory.cards,
@@ -54,10 +59,18 @@ export const LibraryView: React.FC = () => {
     if (!selectedStory) return;
     setIsPublishing(true);
     sound.playMagic();
+    const grade = selectedStory.studentGrade || progress.studentGrade || '4';
+    const classLetter = selectedStory.studentClass || progress.studentClass || 'B';
+    const turmaStr = selectedStory.studentTurma || formatTurmaLabel(grade, classLetter);
+
     try {
       await publishStoryToMural({
         title: selectedStory.title,
         author: selectedStory.author || progress.studentName,
+        studentGrade: String(grade),
+        studentClass: String(classLetter),
+        studentTurma: turmaStr,
+        schoolName: selectedStory.schoolName || progress.schoolName,
         authorUid: progress.studentName || 'aluno',
         genreId: selectedStory.genreId,
         genreName: selectedStory.genreName,
@@ -155,11 +168,18 @@ export const LibraryView: React.FC = () => {
                         <h4 className="text-xs font-black text-slate-900 truncate">
                           {story.title}
                         </h4>
-                        <p className="text-[10px] text-slate-500 truncate">
-                          Por: {story.author} • {story.genreName.split(' ')[0]}
-                        </p>
+                        <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+                          <p className="text-[10px] text-slate-500 truncate">
+                            Por: {story.author}
+                          </p>
+                          <span
+                            className={`text-[9px] font-black px-1.5 py-0.2 rounded-md border ${getTurmaColor(story.studentGrade).badgeBg} ${getTurmaColor(story.studentGrade).badgeText} ${getTurmaColor(story.studentGrade).badgeBorder}`}
+                          >
+                            🎒 {story.studentTurma || (story.studentGrade ? `${story.studentGrade}º Ano ${story.studentClass || ''}` : '4º Ano B')}
+                          </span>
+                        </div>
                         <span className="text-[9px] text-slate-400 block mt-0.5">
-                          {story.createdAt}
+                          {story.createdAt} • {story.genreName.split(' ')[0]}
                         </span>
                       </div>
                     </div>
@@ -271,6 +291,9 @@ export const LibraryView: React.FC = () => {
                       <p className="text-2xl sm:text-3xl font-extrabold text-amber-900 font-display underline decoration-amber-400 decoration-wavy">
                         {selectedStory.author}
                       </p>
+                      <p className="text-xs font-bold text-amber-800">
+                        🎒 Aluno(a) do {selectedStory.studentTurma || (selectedStory.studentGrade ? `${selectedStory.studentGrade}º Ano ${selectedStory.studentClass || ''}` : '4º Ano B')} • {selectedStory.schoolName || 'Escola Municipal Alfabetiza MT'}
+                      </p>
                       <p>
                         escreveu e publicou a extraordinária obra literária intitulada:
                       </p>
@@ -305,16 +328,27 @@ export const LibraryView: React.FC = () => {
                           {selectedStory.coverEmoji}
                         </div>
                         <div>
-                          <span className="text-[10px] font-extrabold uppercase tracking-wider text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
-                            {selectedStory.genreName}
-                          </span>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-[10px] font-extrabold uppercase tracking-wider text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
+                              {selectedStory.genreName}
+                            </span>
+                            <span
+                              className={`text-[10px] font-black px-2 py-0.5 rounded-md border ${getTurmaColor(selectedStory.studentGrade).badgeBg} ${getTurmaColor(selectedStory.studentGrade).badgeText} ${getTurmaColor(selectedStory.studentGrade).badgeBorder} flex items-center gap-0.5`}
+                            >
+                              🎒 {selectedStory.studentTurma || (selectedStory.studentGrade ? `${selectedStory.studentGrade}º Ano ${selectedStory.studentClass || ''}` : '4º Ano B')}
+                            </span>
+                          </div>
                           <h2 className="text-xl sm:text-2xl font-black text-slate-900 font-display mt-1">
                             {selectedStory.title}
                           </h2>
-                          <div className="flex items-center gap-3 text-xs text-slate-500 mt-1">
+                          <div className="flex items-center gap-3 text-xs text-slate-500 mt-1 flex-wrap">
                             <span className="flex items-center gap-1 font-semibold text-slate-700">
                               <User className="w-3.5 h-3.5" />
                               {selectedStory.author}
+                            </span>
+                            <span>•</span>
+                            <span className="text-slate-500">
+                              {selectedStory.schoolName || 'Alfabetiza MT'}
                             </span>
                             <span>•</span>
                             <span className="flex items-center gap-1">

@@ -40,6 +40,9 @@ export interface UserProgress {
   coins: number;
   currentAvatar: string;
   studentName: string;
+  studentGrade: '3' | '4' | '5';
+  studentClass: 'A' | 'B' | 'C' | 'D' | 'E';
+  schoolName?: string;
   unlockedStickers: string[];
   unlockedAvatars: string[];
   completedAchievements: string[]; // for backwards compatibility
@@ -461,6 +464,9 @@ export const INITIAL_USER_PROGRESS: UserProgress = {
   coins: 80,
   currentAvatar: 'av1',
   studentName: 'Escritor(a) Estrela',
+  studentGrade: '4',
+  studentClass: 'B',
+  schoolName: 'Escola Municipal Alfabetiza MT',
   unlockedStickers: ['s1'],
   unlockedAvatars: ['av1', 'av2'],
   completedAchievements: [],

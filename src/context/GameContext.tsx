@@ -13,11 +13,16 @@ import {
 } from '../data/rewards';
 import { StoryCard } from '../data/storyCards';
 import { sound } from '../utils/audio';
+import { SchoolGrade, SchoolClassLetter, formatTurmaLabel } from '../data/studentProfile';
 
 export interface SavedStory {
   id: string;
   title: string;
   author: string;
+  studentGrade?: SchoolGrade | string;
+  studentClass?: SchoolClassLetter | string;
+  studentTurma?: string;
+  schoolName?: string;
   genreId: string;
   genreName: string;
   createdAt: string;
@@ -42,6 +47,7 @@ export interface SavedStory {
 
 interface GameContextType {
   progress: UserProgress;
+  studentTurmaLabel: string;
   savedStories: SavedStory[];
   currentDrawnCards: {
     personagem: StoryCard | null;
@@ -62,6 +68,8 @@ interface GameContextType {
   openTreasureChest: () => { sticker: Sticker | null; isNew: boolean; cashback: number } | null;
   selectAvatar: (avatarId: string) => void;
   updateStudentName: (name: string) => void;
+  updateStudentProfile: (name: string, grade: SchoolGrade, classLetter: SchoolClassLetter, schoolName?: string) => void;
+  updateStudentGradeAndClass: (grade: SchoolGrade, classLetter: SchoolClassLetter) => void;
   saveStory: (story: Omit<SavedStory, 'id' | 'createdAt'>) => string;
   deleteStory: (id: string) => void;
   toggleSound: () => void;
@@ -85,6 +93,9 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return {
           ...INITIAL_USER_PROGRESS,
           ...parsed,
+          studentGrade: (['3', '4', '5'].includes(parsed.studentGrade) ? parsed.studentGrade : '4') as SchoolGrade,
+          studentClass: (['A', 'B', 'C', 'D', 'E'].includes(parsed.studentClass) ? parsed.studentClass : 'B') as SchoolClassLetter,
+          schoolName: parsed.schoolName || INITIAL_USER_PROGRESS.schoolName,
           grammarCorrectByCategory: {
             ...INITIAL_USER_PROGRESS.grammarCorrectByCategory,
             ...(parsed.grammarCorrectByCategory || {}),
@@ -112,6 +123,10 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         id: 'starter-1',
         title: 'O Mistério da Estação e o Robô Curioso',
         author: 'Professora Mariana & Turma',
+        studentGrade: '4',
+        studentClass: 'B',
+        studentTurma: '4º Ano B',
+        schoolName: 'Escola Municipal Alfabetiza MT',
         genreId: 'narrativa',
         genreName: 'Narrativa de Aventura / Mistério',
         createdAt: new Date().toLocaleDateString('pt-BR'),
@@ -412,11 +427,44 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }));
   };
 
+  const updateStudentProfile = (
+    name: string,
+    grade: SchoolGrade,
+    classLetter: SchoolClassLetter,
+    schoolName?: string
+  ) => {
+    setProgress((prev) => ({
+      ...prev,
+      studentName: name.trim() || 'Escritor(a) Mirim',
+      studentGrade: grade,
+      studentClass: classLetter,
+      schoolName: schoolName?.trim() || prev.schoolName || 'Escola Municipal Alfabetiza MT',
+    }));
+  };
+
+  const updateStudentGradeAndClass = (grade: SchoolGrade, classLetter: SchoolClassLetter) => {
+    setProgress((prev) => ({
+      ...prev,
+      studentGrade: grade,
+      studentClass: classLetter,
+    }));
+  };
+
+  const studentTurmaLabel = formatTurmaLabel(progress.studentGrade, progress.studentClass);
+
   const saveStory = (storyData: Omit<SavedStory, 'id' | 'createdAt'>): string => {
     const newId = 'story_' + Date.now();
+    const grade = (storyData.studentGrade || progress.studentGrade || '4') as SchoolGrade;
+    const classLetter = (storyData.studentClass || progress.studentClass || 'B') as SchoolClassLetter;
+
     const newStory: SavedStory = {
       ...storyData,
       id: newId,
+      author: storyData.author?.trim() || progress.studentName,
+      studentGrade: grade,
+      studentClass: classLetter,
+      studentTurma: storyData.studentTurma || formatTurmaLabel(grade, classLetter),
+      schoolName: storyData.schoolName || progress.schoolName,
       createdAt: new Date().toLocaleDateString('pt-BR'),
     };
 
@@ -472,6 +520,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     <GameContext.Provider
       value={{
         progress,
+        studentTurmaLabel,
         savedStories,
         currentDrawnCards,
         setCurrentDrawnCards,
@@ -482,6 +531,8 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         openTreasureChest,
         selectAvatar,
         updateStudentName,
+        updateStudentProfile,
+        updateStudentGradeAndClass,
         saveStory,
         deleteStory,
         toggleSound,

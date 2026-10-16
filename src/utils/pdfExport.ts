@@ -4,6 +4,10 @@ import { StoryCard } from '../data/storyCards';
 export interface ExportPdfParams {
   title: string;
   author: string;
+  studentGrade?: string;
+  studentClass?: string;
+  studentTurma?: string;
+  schoolName?: string;
   genreName: string;
   createdAt?: string;
   cards: {
@@ -91,13 +95,15 @@ export function generateStoryPdf(params: ExportPdfParams): jsPDF {
   doc.text(titleLines, margin, y);
   y += titleLines.length * 7 + 2;
 
-  // Metadata: Author & Date
+  // Metadata: Author, Turma & Date
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9);
   doc.setTextColor(71, 85, 105); // slate-600
-  const authorStr = `Autor(a): ${params.author || 'Escritor(a) Mirim'}`;
+  const authorStr = `Aluno(a): ${params.author || 'Escritor(a) Mirim'}`;
+  const turmaStr = params.studentTurma ? `Turma: ${params.studentTurma}` : '';
   const dateStr = `Data: ${params.createdAt || new Date().toLocaleDateString('pt-BR')}`;
-  doc.text(`${authorStr}    |    ${dateStr}`, margin, y);
+  const metaText = [authorStr, turmaStr, dateStr].filter(Boolean).join('    |    ');
+  doc.text(metaText, margin, y);
   y += 7;
 
   // Box with Cards Used

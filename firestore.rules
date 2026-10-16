@@ -25,7 +25,11 @@ service cloud.firestore {
         && data.author is string && data.author.size() > 0 && data.author.size() <= 80
         && data.authorUid is string && data.authorUid.size() <= 128
         && data.genreName is string && data.genreName.size() <= 80
-        && data.sections is list && data.sections.size() <= 10;
+        && data.sections is list && data.sections.size() <= 10
+        && (!('studentGrade' in data) || (data.studentGrade is string && data.studentGrade.size() <= 10))
+        && (!('studentClass' in data) || (data.studentClass is string && data.studentClass.size() <= 10))
+        && (!('studentTurma' in data) || (data.studentTurma is string && data.studentTurma.size() <= 40))
+        && (!('schoolName' in data) || (data.schoolName is string && data.schoolName.size() <= 120));
     }
 
     // Community Mural of Stories

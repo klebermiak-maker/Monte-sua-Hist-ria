@@ -17,6 +17,8 @@ import {
   Download,
   Printer,
   FileText,
+  User,
+  GraduationCap,
 } from 'lucide-react';
 import { TEXT_GENRES, TextGenre } from '../data/genres';
 import { StoryCard, CATEGORY_INFO } from '../data/storyCards';
@@ -26,17 +28,28 @@ import { generateStoryPdf } from '../utils/pdfExport';
 import { AiStoryAssistantModal } from './AiStoryAssistantModal';
 import { SupportDictionary } from './SupportDictionary';
 import { publishStoryToMural } from '../services/muralService';
+import { StudentProfileModal } from './StudentProfileModal';
+import { getTurmaColor } from '../data/studentProfile';
 
 export const StoryWorkshop: React.FC = () => {
-  const { currentDrawnCards, saveStory, setActiveTab, progress } = useGame();
+  const { currentDrawnCards, saveStory, setActiveTab, progress, studentTurmaLabel } = useGame();
 
   const [selectedGenreId, setSelectedGenreId] = useState<string>('narrativa');
   const activeGenre = TEXT_GENRES.find((g) => g.id === selectedGenreId) || TEXT_GENRES[0];
 
   const [title, setTitle] = useState('');
   const [authorName, setAuthorName] = useState(progress.studentName || 'Jovem Escritor(a)');
+  const [showProfileModal, setShowProfileModal] = useState(false);
   const [coverEmoji, setCoverEmoji] = useState('📖');
   const [coverBg, setCoverBg] = useState('from-amber-400 to-orange-500');
+
+  const turmaStyle = getTurmaColor(progress.studentGrade);
+
+  useEffect(() => {
+    if (progress.studentName && (!authorName || authorName === 'Jovem Escritor(a)')) {
+      setAuthorName(progress.studentName);
+    }
+  }, [progress.studentName]);
 
   // Text contents keyed by genre structure keys
   const [sectionsData, setSectionsData] = useState<Record<string, string>>({
@@ -114,6 +127,10 @@ export const StoryWorkshop: React.FC = () => {
     saveStory({
       title: title.trim(),
       author: authorName.trim() || progress.studentName,
+      studentGrade: progress.studentGrade,
+      studentClass: progress.studentClass,
+      studentTurma: studentTurmaLabel,
+      schoolName: progress.schoolName,
       genreId: activeGenre.id,
       genreName: activeGenre.name,
       coverEmoji,
@@ -149,6 +166,10 @@ export const StoryWorkshop: React.FC = () => {
       saveStory({
         title: title.trim(),
         author: authorName.trim() || progress.studentName,
+        studentGrade: progress.studentGrade,
+        studentClass: progress.studentClass,
+        studentTurma: studentTurmaLabel,
+        schoolName: progress.schoolName,
         genreId: activeGenre.id,
         genreName: activeGenre.name,
         coverEmoji,
@@ -162,6 +183,10 @@ export const StoryWorkshop: React.FC = () => {
       await publishStoryToMural({
         title: title.trim(),
         author: authorName.trim() || progress.studentName,
+        studentGrade: progress.studentGrade,
+        studentClass: progress.studentClass,
+        studentTurma: studentTurmaLabel,
+        schoolName: progress.schoolName,
         authorUid: progress.studentName || 'aluno',
         genreId: activeGenre.id,
         genreName: activeGenre.name,
@@ -294,6 +319,10 @@ export const StoryWorkshop: React.FC = () => {
     const doc = generateStoryPdf({
       title: title.trim(),
       author: authorName.trim() || progress.studentName,
+      studentGrade: progress.studentGrade,
+      studentClass: progress.studentClass,
+      studentTurma: studentTurmaLabel,
+      schoolName: progress.schoolName,
       genreName: activeGenre.name,
       cards: currentDrawnCards,
       sections,
@@ -436,7 +465,7 @@ export const StoryWorkshop: React.FC = () => {
             </p>
           </div>
 
-          {/* Title & Author Inputs */}
+          {/* Title & Author Inputs + Turma Identification */}
           <div className="bg-white rounded-3xl p-5 shadow-xs border border-slate-200 space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="sm:col-span-2">
@@ -464,6 +493,34 @@ export const StoryWorkshop: React.FC = () => {
                   className="w-full text-sm font-bold p-3 rounded-2xl border border-slate-300 text-slate-900 bg-slate-50 focus:bg-white outline-none focus:border-amber-500 transition-colors"
                 />
               </div>
+            </div>
+
+            {/* Student Turma Identification Bar */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pt-3 border-t border-slate-100 bg-slate-50/60 p-3 rounded-2xl">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-xs font-bold text-slate-500">Identificação Escolar:</span>
+                <span
+                  className={`text-xs font-black px-2.5 py-1 rounded-xl border ${turmaStyle.badgeBg} ${turmaStyle.badgeText} ${turmaStyle.badgeBorder} flex items-center gap-1 shadow-2xs`}
+                >
+                  🎒 {studentTurmaLabel}
+                </span>
+                <span className="text-xs text-slate-500 font-medium hidden md:inline">
+                  • {progress.schoolName || 'Alfabetiza MT'}
+                </span>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  sound.playPop();
+                  setShowProfileModal(true);
+                }}
+                className="text-xs font-bold text-amber-700 hover:text-amber-800 bg-amber-100/80 hover:bg-amber-200/80 border border-amber-300 px-3 py-1.5 rounded-xl cursor-pointer transition-colors flex items-center justify-center gap-1.5 self-start sm:self-auto"
+                title="Trocar aluno(a) ou turma do 3º, 4º ou 5º ano (A ao E)"
+              >
+                <User className="w-3.5 h-3.5 text-amber-700" />
+                <span>Trocar Turma / Aluno</span>
+              </button>
             </div>
           </div>
 
@@ -1048,6 +1105,12 @@ export const StoryWorkshop: React.FC = () => {
           onInsertWord={handleInsertWord}
         />
       )}
+
+      {/* Student Profile & Class Selector Modal */}
+      <StudentProfileModal
+        isOpen={showProfileModal}
+        onClose={() => setShowProfileModal(false)}
+      />
     </div>
   );
 };

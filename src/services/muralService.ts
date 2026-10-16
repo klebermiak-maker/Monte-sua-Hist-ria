@@ -16,6 +16,10 @@ export interface MuralStory {
   id: string;
   title: string;
   author: string;
+  studentGrade?: string;
+  studentClass?: string;
+  studentTurma?: string;
+  schoolName?: string;
   authorUid: string;
   genreId: string;
   genreName: string;
@@ -56,6 +60,10 @@ export function subscribeToMuralStories(
           id: docSnap.id,
           title: data.title || 'História Sem Título',
           author: data.author || 'Autor(a) Mirim',
+          studentGrade: data.studentGrade || undefined,
+          studentClass: data.studentClass || undefined,
+          studentTurma: data.studentTurma || (data.studentGrade && data.studentClass ? `${data.studentGrade}º Ano ${data.studentClass}` : undefined),
+          schoolName: data.schoolName || undefined,
           authorUid: data.authorUid || 'anon',
           genreId: data.genreId || 'narrativa',
           genreName: data.genreName || 'Narrativa',
@@ -91,7 +99,7 @@ export async function publishStoryToMural(
   storyData: Omit<MuralStory, 'id' | 'likesCount'>
 ): Promise<string> {
   const uid = auth.currentUser?.uid || `aluno_${Date.now()}`;
-  const payload = {
+  const payload: any = {
     title: storyData.title.trim() || 'Minha História Incrível',
     author: storyData.author.trim() || 'Jovem Escritor(a)',
     authorUid: uid,
@@ -109,6 +117,11 @@ export async function publishStoryToMural(
       content: s.content || '',
     })),
   };
+
+  if (storyData.studentGrade) payload.studentGrade = String(storyData.studentGrade);
+  if (storyData.studentClass) payload.studentClass = String(storyData.studentClass);
+  if (storyData.studentTurma) payload.studentTurma = String(storyData.studentTurma);
+  if (storyData.schoolName) payload.schoolName = String(storyData.schoolName);
 
   try {
     const docRef = await addDoc(collection(db, COLLECTION_NAME), payload);
