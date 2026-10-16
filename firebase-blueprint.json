@@ -1,0 +1,73 @@
+{
+  "entities": {
+    "CommunityStory": {
+      "title": "CommunityStory",
+      "description": "História publicada pelos alunos no Mural da Turma com cartas, seções e curtidas",
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string",
+          "maxLength": 120,
+          "description": "Título da história"
+        },
+        "author": {
+          "type": "string",
+          "maxLength": 80,
+          "description": "Nome do autor ou autora mirim"
+        },
+        "authorUid": {
+          "type": "string",
+          "maxLength": 128,
+          "description": "Identificador do autor"
+        },
+        "genreId": {
+          "type": "string",
+          "maxLength": 50,
+          "description": "Identificador do gênero textual"
+        },
+        "genreName": {
+          "type": "string",
+          "maxLength": 80,
+          "description": "Nome do gênero textual"
+        },
+        "coverEmoji": {
+          "type": "string",
+          "maxLength": 20,
+          "description": "Emoji ilustrativo da capa"
+        },
+        "coverBg": {
+          "type": "string",
+          "maxLength": 100,
+          "description": "Gradiente Tailwind de fundo da capa"
+        },
+        "wordCount": {
+          "type": "number",
+          "description": "Quantidade total de palavras"
+        },
+        "likesCount": {
+          "type": "number",
+          "description": "Contagem de curtidas/estrelas da turma"
+        },
+        "cards": {
+          "type": "object",
+          "description": "Cartas sorteadas usadas na produção"
+        },
+        "sections": {
+          "type": "array",
+          "description": "Partes estruturais do texto com título e conteúdo"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Data de publicação formatada ou timestamp"
+        }
+      },
+      "required": ["title", "author", "authorUid", "genreName", "sections"]
+    }
+  },
+  "firestore": {
+    "/community_stories/{storyId}": {
+      "schema": "CommunityStory",
+      "description": "Coleção do Mural de Histórias compartilhadas de toda a turma"
+    }
+  }
+}

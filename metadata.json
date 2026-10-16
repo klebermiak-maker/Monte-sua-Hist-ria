@@ -1,0 +1,6 @@
+{
+  "name": "Monte Sua História - Oficina de Redação e Gramática",
+  "description": "Jogo pedagógico gamificado para alunos do 3º ao 5º ano do Ensino Fundamental, com sorteio de cartas de narrativa, oficina de gêneros textuais, desafios gramaticais e recompensas colecionáveis.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

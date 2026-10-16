@@ -1,0 +1,49 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global default-deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isValidCommunityStory(data) {
+      return data.keys().hasAll(['title', 'author', 'authorUid', 'genreName', 'sections'])
+        && data.title is string && data.title.size() > 0 && data.title.size() <= 120
+        && data.author is string && data.author.size() > 0 && data.author.size() <= 80
+        && data.authorUid is string && data.authorUid.size() <= 128
+        && data.genreName is string && data.genreName.size() <= 80
+        && data.sections is list && data.sections.size() <= 10;
+    }
+
+    // Community Mural of Stories
+    match /community_stories/{storyId} {
+      allow read: if true;
+      allow create: if isValidId(storyId) && isValidCommunityStory(incoming());
+      allow update: if isValidId(storyId)
+        && isValidCommunityStory(incoming())
+        && incoming().diff(existing()).affectedKeys().hasOnly(['likesCount'])
+        && incoming().title == existing().title
+        && incoming().author == existing().author
+        && incoming().authorUid == existing().authorUid;
+      allow delete: if isValidId(storyId) && (
+        request.auth != null && (
+          resource.data.authorUid == request.auth.uid ||
+          request.auth.token.email == 'klebermiak@gmail.com'
+        )
+      );
+    }
+  }
+}
