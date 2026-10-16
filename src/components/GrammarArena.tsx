@@ -17,7 +17,7 @@ import { useGame } from '../context/GameContext';
 import { sound } from '../utils/audio';
 
 export const GrammarArena: React.FC = () => {
-  const { recordGrammarSuccess, triggerConfetti } = useGame();
+  const { recordGrammarSuccess, triggerConfetti, studentTurmaLabel } = useGame();
 
   const [activeModuleId, setActiveModuleId] = useState<string>('classes');
   const currentModule = GRAMMAR_MODULES.find((m) => m.id === activeModuleId) || GRAMMAR_MODULES[0];
@@ -286,6 +286,13 @@ export const GrammarArena: React.FC = () => {
             <p className="text-xs sm:text-sm font-medium leading-relaxed">
               {question.explanation}
             </p>
+
+            {isCorrect && (
+              <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-200/80 text-emerald-950 text-xs font-black border border-emerald-300 shadow-2xs">
+                <span>🎒</span>
+                <span>+{question.rewardXp + question.rewardCoins} pontos somados para o <strong>{studentTurmaLabel}</strong> no Ranking de Turmas!</span>
+              </div>
+            )}
 
             <div className="flex justify-end pt-2">
               <button

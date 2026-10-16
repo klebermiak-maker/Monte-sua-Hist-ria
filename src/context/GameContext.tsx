@@ -14,6 +14,7 @@ import {
 import { StoryCard } from '../data/storyCards';
 import { sound } from '../utils/audio';
 import { SchoolGrade, SchoolClassLetter, formatTurmaLabel } from '../data/studentProfile';
+import { recordClassPoints } from '../services/classRankingService';
 
 export interface SavedStory {
   id: string;
@@ -45,6 +46,8 @@ export interface SavedStory {
   contributors?: string[];
 }
 
+export type ActiveTabType = 'draw' | 'workshop' | 'grammar' | 'mural' | 'ranking' | 'rewards' | 'library' | 'pedagogical';
+
 interface GameContextType {
   progress: UserProgress;
   studentTurmaLabel: string;
@@ -61,8 +64,8 @@ interface GameContextType {
     acao: StoryCard | null;
     complemento: StoryCard | null;
   }) => void;
-  activeTab: 'draw' | 'workshop' | 'grammar' | 'rewards' | 'library' | 'pedagogical' | 'mural';
-  setActiveTab: (tab: 'draw' | 'workshop' | 'grammar' | 'rewards' | 'library' | 'pedagogical' | 'mural') => void;
+  activeTab: ActiveTabType;
+  setActiveTab: (tab: ActiveTabType) => void;
   addXpAndCoins: (xp: number, coins: number) => void;
   unlockSticker: (stickerId: string) => boolean;
   openTreasureChest: () => { sticker: Sticker | null; isNew: boolean; cashback: number } | null;
@@ -75,6 +78,7 @@ interface GameContextType {
   toggleSound: () => void;
   triggerConfetti: () => void;
   recordGrammarSuccess: (moduleKey: string, earnedXp: number, earnedCoins: number, currentStreak: number) => void;
+  awardClassPoints: (type: 'grammar' | 'writing', points: number, detail?: string) => void;
   newlyUnlockedBadge: Badge | null;
   dismissBadgeNotification: () => void;
 }
@@ -222,7 +226,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     complemento: null,
   });
 
-  const [activeTab, setActiveTab] = useState<'draw' | 'workshop' | 'grammar' | 'rewards' | 'library' | 'pedagogical' | 'mural'>('draw');
+  const [activeTab, setActiveTab] = useState<ActiveTabType>('draw');
   const [newlyUnlockedBadge, setNewlyUnlockedBadge] = useState<Badge | null>(null);
 
   useEffect(() => {
@@ -328,6 +332,17 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     earnedCoins: number,
     currentStreak: number
   ) => {
+    // Automatically contribute points to the student's turma
+    const classGrammarPoints = earnedXp + earnedCoins;
+    recordClassPoints(
+      progress.studentGrade,
+      progress.studentClass,
+      'grammar',
+      classGrammarPoints,
+      progress.studentName,
+      `Desafio de Gramática concluído (+${classGrammarPoints} pts)`
+    );
+
     setProgress((prev) => {
       const currentCategoryScore = prev.grammarCorrectByCategory?.[moduleKey] || 0;
       const newTotalCorrect = (prev.grammarTotalCorrect || 0) + 1;
@@ -348,6 +363,17 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       return checkAndUnlockBadges(nextProgress);
     });
+  };
+
+  const awardClassPoints = (type: 'grammar' | 'writing', points: number, detail?: string) => {
+    recordClassPoints(
+      progress.studentGrade,
+      progress.studentClass,
+      type,
+      points,
+      progress.studentName,
+      detail
+    );
   };
 
   const unlockSticker = (stickerId: string): boolean => {
@@ -470,6 +496,18 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     setSavedStories((prev) => [newStory, ...prev]);
 
+    // Record collaborative writing points for the student's class
+    const wordBonus = Math.min(100, Math.round((storyData.wordCount || 60) * 0.5));
+    const writingPointsEarned = 150 + wordBonus;
+    recordClassPoints(
+      grade,
+      classLetter,
+      'writing',
+      writingPointsEarned,
+      newStory.author,
+      `Nova história escrita: "${newStory.title}" (+${writingPointsEarned} pts)`
+    );
+
     sound.playFanfare();
     triggerConfetti();
 
@@ -538,6 +576,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         toggleSound,
         triggerConfetti,
         recordGrammarSuccess,
+        awardClassPoints,
         newlyUnlockedBadge,
         dismissBadgeNotification,
       }}

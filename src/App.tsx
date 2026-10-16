@@ -9,6 +9,7 @@ import { LibraryView } from './components/LibraryView';
 import { PedagogicalGuide } from './components/PedagogicalGuide';
 import { BadgeUnlockModal } from './components/BadgeUnlockModal';
 import { CommunityMural } from './components/CommunityMural';
+import { ClassRankingView } from './components/ClassRankingView';
 
 const MainContent: React.FC = () => {
   const { activeTab } = useGame();
@@ -18,6 +19,7 @@ const MainContent: React.FC = () => {
       {activeTab === 'draw' && <CardDrawView />}
       {activeTab === 'workshop' && <StoryWorkshop />}
       {activeTab === 'grammar' && <GrammarArena />}
+      {activeTab === 'ranking' && <ClassRankingView />}
       {activeTab === 'mural' && <CommunityMural />}
       {activeTab === 'rewards' && <RewardsView />}
       {activeTab === 'library' && <LibraryView />}

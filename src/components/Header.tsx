@@ -8,6 +8,7 @@ import {
   Edit3,
   Dices,
   Trophy,
+  Award,
   GraduationCap,
   Library,
   Flame,
@@ -42,6 +43,7 @@ export const Header: React.FC = () => {
     { id: 'draw', label: 'Monte a História', icon: Dices, color: 'text-amber-500', badge: 'Cartas' },
     { id: 'workshop', label: 'Oficina de Escrita', icon: Edit3, color: 'text-blue-500', badge: 'Criar' },
     { id: 'grammar', label: 'Arena de Gramática', icon: Flame, color: 'text-purple-500', badge: 'Desafios' },
+    { id: 'ranking', label: 'Ranking de Turmas', icon: Award, color: 'text-amber-500', badge: 'Salas 🏆' },
     { id: 'mural', label: 'Mural da Turma', icon: Sparkles, color: 'text-orange-500', badge: 'Nuvem 🌟' },
     { id: 'rewards', label: 'Medalhas & Baú', icon: Trophy, color: 'text-yellow-500', badge: `${unlockedCount}🏅` },
     { id: 'library', label: 'Meus Livros', icon: Library, color: 'text-emerald-500', badge: '' },
@@ -109,6 +111,18 @@ export const Header: React.FC = () => {
 
                 <Edit3 className="w-3.5 h-3.5 text-slate-400 group-hover:text-amber-600 transition-colors shrink-0" />
               </div>
+
+              {/* Quick shortcut to Class Ranking */}
+              <button
+                onClick={() => {
+                  sound.playPop();
+                  setActiveTab('ranking');
+                }}
+                className="hidden lg:flex items-center gap-1 text-[11px] font-black text-amber-800 bg-amber-100 hover:bg-amber-200 px-2 py-1 rounded-xl border border-amber-300 transition-all cursor-pointer shadow-2xs hover:scale-105"
+                title="Abrir o Ranking de Turmas da Escola"
+              >
+                <span>🏆 Ranking</span>
+              </button>
             </div>
 
             {/* Level & XP Gauge */}
